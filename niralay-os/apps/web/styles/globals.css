@@ -1,0 +1,220 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── NDL CSS Variables ──────────────────────────────────────── */
+:root {
+  --color-primary:        #155E4B;
+  --color-primary-light:  #EDF7F3;
+  --color-secondary:      #49617A;
+  --color-accent:         #D4AF37;
+  --color-bg:             #F7F8FA;
+  --color-surface:        #FFFFFF;
+  --color-border:         #E5E7EB;
+  --color-text-primary:   #1F2937;
+  --color-text-secondary: #6B7280;
+  --color-success:        #16A34A;
+  --color-warning:        #F59E0B;
+  --color-danger:         #DC2626;
+
+  --radius-card:   18px;
+  --radius-lg:     14px;
+  --radius-md:     8px;
+  --radius-sm:     6px;
+
+  --shadow-card:   0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.04);
+  --shadow-hover:  0 4px 12px 0 rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+  --shadow-modal:  0 20px 60px -10px rgba(0,0,0,0.15), 0 8px 20px -6px rgba(0,0,0,0.08);
+
+  --sidebar-width: 256px;
+  --topbar-height: 64px;
+}
+
+/* ─── Base Reset ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 100px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
+
+/* ─── Focus Ring ─────────────────────────────────────────────── */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ─── Selection ──────────────────────────────────────────────── */
+::selection {
+  background-color: #D0EDE5;
+  color: var(--color-primary);
+}
+
+/* ─── NDL Utility Classes ────────────────────────────────────── */
+@layer components {
+  /* Cards */
+  .ndl-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--color-border);
+    transition: box-shadow 200ms ease, transform 200ms ease;
+  }
+  .ndl-card:hover {
+    box-shadow: var(--shadow-hover);
+  }
+
+  /* Inputs */
+  .ndl-input {
+    @apply w-full px-4 py-2.5 rounded-lg border border-border bg-white text-text-primary 
+           text-sm placeholder-text-secondary
+           focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary
+           transition-all duration-200;
+  }
+
+  /* Buttons */
+  .ndl-btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg 
+           text-sm font-medium transition-all duration-150 cursor-pointer 
+           disabled:opacity-50 disabled:cursor-not-allowed select-none;
+  }
+  .ndl-btn-primary {
+    @apply ndl-btn bg-primary text-white hover:bg-primary-600 active:scale-[0.98];
+  }
+  .ndl-btn-secondary {
+    @apply ndl-btn bg-white text-text-primary border border-border hover:bg-background active:scale-[0.98];
+  }
+  .ndl-btn-danger {
+    @apply ndl-btn bg-danger text-white hover:bg-danger-600 active:scale-[0.98];
+  }
+  .ndl-btn-ghost {
+    @apply ndl-btn bg-transparent text-text-secondary hover:bg-background hover:text-text-primary active:scale-[0.98];
+  }
+  .ndl-btn-accent {
+    @apply ndl-btn bg-accent text-white hover:opacity-90 active:scale-[0.98];
+  }
+
+  /* Badges */
+  .ndl-badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .ndl-badge-success {
+    @apply ndl-badge bg-success-100 text-success-600;
+  }
+  .ndl-badge-warning {
+    @apply ndl-badge bg-warning-100 text-warning-600;
+  }
+  .ndl-badge-danger {
+    @apply ndl-badge bg-danger-100 text-danger-600;
+  }
+  .ndl-badge-secondary {
+    @apply ndl-badge bg-gray-100 text-gray-600;
+  }
+  .ndl-badge-primary {
+    @apply ndl-badge bg-primary-100 text-primary-500;
+  }
+  .ndl-badge-accent {
+    @apply ndl-badge bg-accent-50 text-accent-600;
+  }
+
+  /* Page title */
+  .ndl-page-title {
+    @apply text-2xl font-bold text-text-primary tracking-tight;
+  }
+  .ndl-section-title {
+    @apply text-lg font-semibold text-text-primary;
+  }
+  .ndl-label {
+    @apply text-sm font-medium text-text-primary;
+  }
+  .ndl-meta {
+    @apply text-xs text-text-secondary;
+  }
+
+  /* Divider */
+  .ndl-divider {
+    @apply border-t border-border;
+  }
+
+  /* Sidebar nav item */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+           text-text-secondary cursor-pointer transition-all duration-150 select-none;
+  }
+  .sidebar-item:hover {
+    @apply bg-background text-text-primary;
+  }
+  .sidebar-item.active {
+    @apply bg-primary-50 text-primary font-semibold;
+  }
+  .sidebar-item.active svg {
+    @apply text-primary;
+  }
+}
+
+/* ─── Table styles ───────────────────────────────────────────── */
+.ndl-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.ndl-table thead th {
+  position: sticky;
+  top: 0;
+  background: #F9FAFB;
+  padding: 10px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+  z-index: 1;
+}
+.ndl-table tbody tr {
+  transition: background-color 150ms ease;
+}
+.ndl-table tbody tr:hover {
+  background-color: #F9FAFB;
+}
+.ndl-table tbody td {
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid #F3F4F6;
+  vertical-align: middle;
+}

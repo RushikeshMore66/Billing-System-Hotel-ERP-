@@ -1,0 +1,19 @@
+{
+  "name": "niralay-os",
+  "private": true,
+  "packageManager": "npm@11.14.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "prettier": "^3.0.0"
+  }
+}

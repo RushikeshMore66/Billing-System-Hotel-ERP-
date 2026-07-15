@@ -1,0 +1,14 @@
+{
+  "name": "@niralayos/ui",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "dependencies": {
+    "react": "^19.0.0-rc",
+    "react-dom": "^19.0.0-rc"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
