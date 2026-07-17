@@ -29,20 +29,30 @@ logger = get_logger(__name__)
 def _build_engine():  # type: ignore[return]
     cfg = get_settings()
 
-    connect_args: dict[str, object] = {}
-    # psycopg2 requires application_name for connection tracking in pg_stat_activity
-    connect_args["application_name"] = cfg.APP_NAME
+    is_sqlite = cfg.DATABASE_URL.startswith("sqlite")
 
-    engine = create_engine(
-        cfg.DATABASE_URL,
-        pool_size=cfg.DATABASE_POOL_SIZE,
-        max_overflow=cfg.DATABASE_MAX_OVERFLOW,
-        pool_timeout=cfg.DATABASE_POOL_TIMEOUT,
-        pool_recycle=cfg.DATABASE_POOL_RECYCLE,
-        pool_pre_ping=True,          # Detect stale connections automatically
-        echo=cfg.DATABASE_ECHO,
-        connect_args=connect_args,
-    )
+    connect_args: dict[str, object] = {}
+    if is_sqlite:
+        # SQLite requires check_same_thread=False for multi-threaded use (tests)
+        connect_args["check_same_thread"] = False
+    else:
+        # psycopg2: track this connection in pg_stat_activity
+        connect_args["application_name"] = cfg.APP_NAME
+
+    engine_kwargs: dict[str, object] = {
+        "pool_pre_ping": True,
+        "echo": cfg.DATABASE_ECHO,
+        "connect_args": connect_args,
+    }
+
+    if not is_sqlite:
+        # SQLite uses StaticPool / NullPool and does not accept these kwargs
+        engine_kwargs["pool_size"] = cfg.DATABASE_POOL_SIZE
+        engine_kwargs["max_overflow"] = cfg.DATABASE_MAX_OVERFLOW
+        engine_kwargs["pool_timeout"] = cfg.DATABASE_POOL_TIMEOUT
+        engine_kwargs["pool_recycle"] = cfg.DATABASE_POOL_RECYCLE
+
+    engine = create_engine(cfg.DATABASE_URL, **engine_kwargs)  # type: ignore[arg-type]
 
     # Log first connection success
     @event.listens_for(engine, "connect")

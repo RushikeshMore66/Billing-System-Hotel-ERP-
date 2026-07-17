@@ -21,6 +21,9 @@ from alembic import context
 from app.core.settings import get_settings
 from app.database.base import Base
 
+# Import all models so Alembic detects them during autogenerate
+import app.models  # noqa: F401
+
 # ------------------------------------------------------------------
 # Alembic Config object — provides .ini file values
 # ------------------------------------------------------------------

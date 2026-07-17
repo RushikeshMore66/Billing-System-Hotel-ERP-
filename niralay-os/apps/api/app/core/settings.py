@@ -97,6 +97,25 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7, ge=1, le=90)
 
     # ------------------------------------------------------------------
+    # Account lockout
+    # ------------------------------------------------------------------
+    MAX_LOGIN_ATTEMPTS: int = Field(default=5, ge=1)
+    ACCOUNT_LOCKOUT_MINUTES: int = Field(default=15, ge=1)
+
+    # ------------------------------------------------------------------
+    # Password policy
+    # ------------------------------------------------------------------
+    PASSWORD_MIN_LENGTH: int = Field(default=12, ge=8)
+    PASSWORD_HISTORY_COUNT: int = Field(default=5, ge=0)
+
+    # ------------------------------------------------------------------
+    # Bootstrap admin (seeded at first startup)
+    # ------------------------------------------------------------------
+    ADMIN_EMAIL: str = "admin@niralayos.com"
+    ADMIN_PASSWORD: str = "Admin@NiralayOS2024!"
+    ADMIN_FULL_NAME: str = "System Administrator"
+
+    # ------------------------------------------------------------------
     # Logging
     # ------------------------------------------------------------------
     LOG_LEVEL: str = "INFO"

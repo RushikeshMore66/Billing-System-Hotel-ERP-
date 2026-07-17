@@ -93,6 +93,8 @@ class Permission(str, Enum):
     USER_CREATE = "user:create"
     USER_UPDATE = "user:update"
     USER_DELETE = "user:delete"
+    # Dashboard-specific (Sprint 2 Module 1)
+    DASHBOARD_MANAGE = "dashboard:manage"
 
 
 ROLE_PERMISSIONS: dict = {

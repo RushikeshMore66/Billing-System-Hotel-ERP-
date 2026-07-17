@@ -63,6 +63,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         cfg.SERVER_PORT,
     )
 
+    if db_ok:
+        try:
+            from app.database.session import get_session_factory
+            from app.core.seeder import seed_database
+            SessionFactory = get_session_factory()
+            with SessionFactory() as db:
+                seed_database(db)
+                db.commit()
+        except Exception as e:
+            logger.error("Database seeding failed: %s", e)
+
     yield  # Application runs here
 
     # ---- Shutdown -------------------------------------------------------
