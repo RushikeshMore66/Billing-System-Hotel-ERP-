@@ -1,5 +1,30 @@
 """Services package for NiralayOS."""
 
+# ── Sprint 3: Property Configuration ────────────────────────────────────────
+from app.services.property import (
+    PropertyProfileService,
+    FloorService,
+    AmenityService,
+    BedTypeService,
+    RoomTypeService,
+    RoomService,
+    TaxService,
+    PaymentMethodService,
+    CurrencyService,
+    SeasonService,
+    RatePlanService,
+)
+from app.services.restaurant_config import (
+    RestaurantCategoryService,
+    MenuCategoryService,
+    KitchenStationService,
+    MenuItemService,
+    MenuModifierService,
+    RestaurantTableService,
+)
+from app.services.organization import DepartmentService, DesignationService, GuestIDTypeService
+from app.services.business_settings import BusinessSettingsService
+
 from app.services.audit import AuditService
 from app.services.role import RoleService, PermissionService
 from app.services.user import UserService

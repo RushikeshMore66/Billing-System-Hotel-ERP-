@@ -1,5 +1,38 @@
 """Schemas package for NiralayOS."""
 
+# ── Sprint 3: Property Configuration ─────────────────────────────────────────
+from app.schemas.property import (
+    PropertyProfileUpdate,
+    PropertyProfileOut,
+    FloorCreate, FloorUpdate, FloorOut,
+    AmenityCreate, AmenityUpdate, AmenityOut,
+    BedTypeCreate, BedTypeUpdate, BedTypeOut,
+    RoomTypeCreate, RoomTypeUpdate, RoomTypeOut, RoomTypeBrief,
+    RoomTypeImageIn, RoomTypeImageOut,
+    RoomCreate, RoomUpdate, RoomOut, RoomBulkCreate, RoomBulkResult,
+    TaxCreate, TaxUpdate, TaxOut,
+    PaymentMethodCreate, PaymentMethodUpdate, PaymentMethodOut,
+    CurrencyCreate, CurrencyUpdate, CurrencyOut,
+    SeasonCreate, SeasonUpdate, SeasonOut,
+    RatePlanCreate, RatePlanUpdate, RatePlanOut,
+    RatePlanSeasonRateIn, RatePlanSeasonRateOut,
+)
+from app.schemas.restaurant import (
+    RestaurantCategoryCreate, RestaurantCategoryUpdate, RestaurantCategoryOut,
+    MenuCategoryCreate, MenuCategoryUpdate, MenuCategoryOut,
+    KitchenStationCreate, KitchenStationUpdate, KitchenStationOut,
+    MenuItemCreate, MenuItemUpdate, MenuItemOut,
+    MenuModifierCreate, MenuModifierUpdate, MenuModifierOut, MenuModifierBrief,
+    MenuModifierOptionIn, MenuModifierOptionOut,
+    RestaurantTableCreate, RestaurantTableUpdate, RestaurantTableOut,
+)
+from app.schemas.organization import (
+    DepartmentCreate, DepartmentUpdate, DepartmentOut,
+    DesignationCreate, DesignationUpdate, DesignationOut,
+    GuestIDTypeCreate, GuestIDTypeUpdate, GuestIDTypeOut,
+)
+from app.schemas.business_settings import BusinessSettingsUpdate, BusinessSettingsOut
+
 from app.schemas.base import (
     AuditSchema,
     ErrorDetail,
