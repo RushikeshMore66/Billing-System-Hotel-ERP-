@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Search,
   Bell,
   ChevronDown,
   Command,
   Sun,
-  CloudSun,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/providers/AuthProvider";
 
 // ─── Live Clock ───────────────────────────────────────────────
 
@@ -60,6 +61,24 @@ interface TopbarProps {
 
 export function Topbar({ title }: TopbarProps) {
   const [notifCount] = useState(4);
+  const { user, logout } = useAuth();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const getInitials = (name: string) => {
+    if (!name) return "U";
+    return name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
+  };
 
   return (
     <header
@@ -132,25 +151,49 @@ export function Topbar({ title }: TopbarProps) {
         </button>
 
         {/* Profile */}
-        <button className="flex items-center gap-2.5 pl-3 pr-2.5 py-1.5 rounded-lg hover:bg-background transition-colors duration-150 border border-transparent hover:border-border">
-          <div
-            className="flex items-center justify-center rounded-full font-semibold text-xs text-white"
-            style={{
-              width: 30,
-              height: 30,
-              background: "linear-gradient(135deg, #49617A, #5d7a99)",
-            }}
+        <div className="relative" ref={dropdownRef}>
+          <button 
+            onClick={() => setShowDropdown(!showDropdown)}
+            className="flex items-center gap-2.5 pl-3 pr-2.5 py-1.5 rounded-lg hover:bg-background transition-colors duration-150 border border-transparent hover:border-border"
           >
-            RK
-          </div>
-          <div className="hidden md:block text-left">
-            <p className="text-sm font-medium text-text-primary leading-none">
-              Rushi Kumar
-            </p>
-            <p className="text-[11px] text-text-secondary mt-0.5">Manager</p>
-          </div>
-          <ChevronDown size={14} className="text-text-secondary" />
-        </button>
+            <div
+              className="flex items-center justify-center rounded-full font-semibold text-xs text-white"
+              style={{
+                width: 30,
+                height: 30,
+                background: "linear-gradient(135deg, #49617A, #5d7a99)",
+              }}
+            >
+              {getInitials(user?.full_name || "")}
+            </div>
+            <div className="hidden md:block text-left">
+              <p className="text-sm font-medium text-text-primary leading-none">
+                {user?.full_name || "User"}
+              </p>
+              <p className="text-[11px] text-text-secondary mt-0.5 capitalize">
+                {user?.roles?.[0]?.replace("_", " ") || "Staff"}
+              </p>
+            </div>
+            <ChevronDown size={14} className="text-text-secondary" />
+          </button>
+
+          {/* Dropdown Menu */}
+          {showDropdown && (
+            <div className="absolute right-0 mt-2 w-48 bg-surface rounded-lg shadow-lg border border-border py-1 z-50">
+              <div className="px-4 py-2 border-b border-border">
+                <p className="text-sm font-medium text-text-primary">{user?.full_name}</p>
+                <p className="text-xs text-text-secondary truncate">{user?.email}</p>
+              </div>
+              <button
+                onClick={() => logout()}
+                className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-danger-50 flex items-center gap-2"
+              >
+                <LogOut size={16} />
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

@@ -19,6 +19,8 @@ from app.api.v1.property import router as property_router
 from app.api.v1.restaurant_config import router as restaurant_config_router
 from app.api.v1.organization import router as organization_router
 from app.api.v1.business_settings import router as business_settings_router
+from app.api.v1.guests import router as guests_router
+from app.api.v1.reservations import router as reservations_router
 
 settings = get_settings()
 
@@ -41,3 +43,7 @@ api_router.include_router(property_router)
 api_router.include_router(restaurant_config_router)
 api_router.include_router(organization_router)
 api_router.include_router(business_settings_router)
+
+# ---- Sprint 4: Reservations Platform ----
+api_router.include_router(guests_router)
+api_router.include_router(reservations_router)

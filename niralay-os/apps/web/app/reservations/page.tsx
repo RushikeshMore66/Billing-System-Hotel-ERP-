@@ -16,37 +16,47 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-const reservations = [
-  { id: "RES-2847", guest: "Arjun Mehta", email: "arjun@email.com", room: "Deluxe Suite 301", type: "Suite", checkIn: "14 Jul", checkOut: "16 Jul", nights: 2, guests: 2, amount: 18500, source: "Direct", status: "checked-in" },
-  { id: "RES-2848", guest: "Priya Sharma", email: "priya@email.com", room: "Garden View 105", type: "Deluxe", checkIn: "14 Jul", checkOut: "17 Jul", nights: 3, guests: 1, amount: 24750, source: "Booking.com", status: "pending" },
-  { id: "RES-2849", guest: "Rahul Patel", email: "rahul@email.com", room: "Honeymoon Villa", type: "Villa", checkIn: "15 Jul", checkOut: "19 Jul", nights: 4, guests: 2, amount: 56000, source: "Direct", status: "confirmed" },
-  { id: "RES-2850", guest: "Dr. Kavya Nair", email: "kavya@email.com", room: "Executive 208", type: "Superior", checkIn: "15 Jul", checkOut: "16 Jul", nights: 1, guests: 1, amount: 8200, source: "Agoda", status: "confirmed" },
-  { id: "RES-2846", guest: "Vikram Desai", email: "vikram@email.com", room: "Superior 412", type: "Superior", checkIn: "12 Jul", checkOut: "14 Jul", nights: 2, guests: 2, amount: 14400, source: "Direct", status: "checkout" },
-  { id: "RES-2845", guest: "Meera Joshi", email: "meera@email.com", room: "Pool View 220", type: "Deluxe", checkIn: "11 Jul", checkOut: "13 Jul", nights: 2, guests: 1, amount: 16000, source: "MakeMyTrip", status: "checkout" },
-  { id: "RES-2851", guest: "Suresh Kumar", email: "suresh@email.com", room: "Standard 304", type: "Standard", checkIn: "16 Jul", checkOut: "18 Jul", nights: 2, guests: 3, amount: 9600, source: "Booking.com", status: "confirmed" },
-  { id: "RES-2852", guest: "Anita Bose", email: "anita@email.com", room: "Cottage 02", type: "Cottage", checkIn: "17 Jul", checkOut: "21 Jul", nights: 4, guests: 2, amount: 36000, source: "Direct", status: "confirmed" },
-];
+import { useEffect } from "react";
+import { reservationApi, Reservation } from "@/services/api";
+import { format } from "date-fns";
 
 const statusConfig: Record<string, { label: string; className: string; icon: React.ElementType }> = {
-  "checked-in": { label: "Checked In", className: "bg-success-50 text-success", icon: CheckCircle2 },
+  "checked_in": { label: "Checked In", className: "bg-success-50 text-success", icon: CheckCircle2 },
   confirmed: { label: "Confirmed", className: "bg-primary-50 text-primary", icon: CalendarCheck },
   pending: { label: "Pending", className: "bg-warning-50 text-warning", icon: Timer },
-  checkout: { label: "Checked Out", className: "bg-gray-100 text-gray-500", icon: LogOut },
+  "checked_out": { label: "Checked Out", className: "bg-gray-100 text-gray-500", icon: LogOut },
 };
 
 export default function ReservationsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filtered = reservations.filter((r) => {
-    const matchSearch = r.guest.toLowerCase().includes(search.toLowerCase()) || r.id.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || r.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  useEffect(() => {
+    const fetchReservations = async () => {
+      setIsLoading(true);
+      try {
+        const res = await reservationApi.list({ 
+          search: search || undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined
+        });
+        setReservations(res.items);
+      } catch (err) {
+        console.error("Failed to load reservations", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    const delayDebounceFn = setTimeout(() => {
+      fetchReservations();
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [search, statusFilter]);
 
   const stats = {
     total: reservations.length,
-    checkedIn: reservations.filter((r) => r.status === "checked-in").length,
+    checkedIn: reservations.filter((r) => r.status === "checked_in").length,
     arriving: reservations.filter((r) => r.status === "confirmed").length,
     pending: reservations.filter((r) => r.status === "pending").length,
   };
@@ -96,10 +106,10 @@ export default function ReservationsPage() {
           </div>
           {/* Status Filter */}
           <div className="flex items-center gap-1.5">
-            {["all", "checked-in", "confirmed", "pending", "checkout"].map((s) => (
+            {["all", "checked_in", "confirmed", "pending", "checked_out"].map((s) => (
               <button key={s} onClick={() => setStatusFilter(s)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${statusFilter === s ? "bg-primary text-white" : "bg-background text-text-secondary hover:bg-border"}`}>
-                {s === "all" ? "All" : s === "checked-in" ? "In-House" : s === "checkout" ? "Checked Out" : s.charAt(0).toUpperCase() + s.slice(1)}
+                {s === "all" ? "All" : s === "checked_in" ? "In-House" : s === "checked_out" ? "Checked Out" : s.charAt(0).toUpperCase() + s.slice(1)}
               </button>
             ))}
           </div>
@@ -126,32 +136,39 @@ export default function ReservationsPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => {
-                const cfg = statusConfig[r.status];
+              {reservations.length === 0 && !isLoading && (
+                <tr>
+                  <td colSpan={10} className="text-center py-8 text-text-secondary">
+                    No reservations found.
+                  </td>
+                </tr>
+              )}
+              {reservations.map((r) => {
+                const cfg = statusConfig[r.status] || { label: r.status, className: "bg-gray-100 text-gray-500", icon: Timer };
                 return (
                   <tr key={r.id} className="cursor-pointer">
                     <td>
                       <div className="flex items-center gap-2.5">
                         <div className="flex items-center justify-center rounded-full text-xs font-bold text-white shrink-0"
                           style={{ width: 32, height: 32, background: "linear-gradient(135deg, #155E4B, #1d7a62)" }}>
-                          {r.guest.charAt(0)}
+                          {r.guest?.full_name ? r.guest.full_name.charAt(0) : "G"}
                         </div>
                         <div>
-                          <p className="font-semibold text-text-primary text-sm">{r.guest}</p>
-                          <p className="text-xs text-text-secondary">{r.email}</p>
+                          <p className="font-semibold text-text-primary text-sm">{r.guest?.full_name || "Unknown Guest"}</p>
+                          <p className="text-xs text-text-secondary">{r.guest?.email || r.guest?.phone || ""}</p>
                         </div>
                       </div>
                     </td>
-                    <td><span className="font-mono text-xs font-semibold text-text-secondary">{r.id}</span></td>
+                    <td><span className="font-mono text-xs font-semibold text-text-secondary">{r.reservation_number}</span></td>
                     <td>
-                      <p className="text-sm font-medium text-text-primary">{r.room}</p>
-                      <p className="text-xs text-text-secondary">{r.type}</p>
+                      <p className="text-sm font-medium text-text-primary">{r.room_id ? `Room ${r.room_id}` : "Unassigned"}</p>
+                      <p className="text-xs text-text-secondary">Type: {r.room_type_id}</p>
                     </td>
-                    <td className="text-sm text-text-primary font-medium">{r.checkIn}</td>
-                    <td className="text-sm text-text-primary font-medium">{r.checkOut}</td>
+                    <td className="text-sm text-text-primary font-medium">{format(new Date(r.check_in_date), "dd MMM")}</td>
+                    <td className="text-sm text-text-primary font-medium">{format(new Date(r.check_out_date), "dd MMM")}</td>
                     <td className="text-sm text-text-primary">{r.nights}N</td>
-                    <td><span className="ndl-badge ndl-badge-secondary text-xs">{r.source}</span></td>
-                    <td className="font-semibold text-text-primary text-sm">₹{r.amount.toLocaleString("en-IN")}</td>
+                    <td><span className="ndl-badge ndl-badge-secondary text-xs uppercase">{r.source.replace("_", " ")}</span></td>
+                    <td className="font-semibold text-text-primary text-sm">₹{Number(r.total_amount).toLocaleString("en-IN")}</td>
                     <td>
                       <span className={`ndl-badge text-xs ${cfg.className}`}>
                         <cfg.icon size={11} />

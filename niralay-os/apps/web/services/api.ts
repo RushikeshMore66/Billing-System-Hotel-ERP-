@@ -4,10 +4,38 @@
  * Typed fetch wrapper for the NiralayOS backend.
  * All endpoints follow the SuccessResponse<T> / PaginatedResponse<T> envelope.
  *
- * Auth token is read from localStorage (key: "niralay_access_token").
+ * Auth tokens are stored in localStorage:
+ *   niralay_access_token  — short-lived JWT
+ *   niralay_refresh_token — long-lived refresh token
  */
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
+// ─── Token helpers ────────────────────────────────────────────────────────────
+
+export const tokenStorage = {
+  getAccess: (): string | null =>
+    typeof window !== "undefined" ? localStorage.getItem("niralay_access_token") : null,
+  getRefresh: (): string | null =>
+    typeof window !== "undefined" ? localStorage.getItem("niralay_refresh_token") : null,
+  set: (access: string, refresh: string): void => {
+    localStorage.setItem("niralay_access_token", access);
+    localStorage.setItem("niralay_refresh_token", refresh);
+  },
+  clear: (): void => {
+    localStorage.removeItem("niralay_access_token");
+    localStorage.removeItem("niralay_refresh_token");
+    localStorage.removeItem("niralay_user");
+  },
+  setUser: (user: CurrentUser): void => {
+    localStorage.setItem("niralay_user", JSON.stringify(user));
+  },
+  getUser: (): CurrentUser | null => {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem("niralay_user");
+    return raw ? (JSON.parse(raw) as CurrentUser) : null;
+  },
+};
 
 // ─── Response envelope types ──────────────────────────────────────────────────
 
@@ -26,6 +54,65 @@ export interface PaginatedResponse<T> {
 }
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
+
+export interface CurrentUser {
+  id: number;
+  uuid: string;
+  username: string;
+  email: string;
+  full_name: string;
+  avatar?: string;
+  department?: string;
+  designation?: string;
+  status: string;
+  is_superuser: boolean;
+  roles: string[];
+  permissions: string[];
+}
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface Guest {
+  id: number;
+  uuid: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  id_number?: string;
+  nationality?: string;
+  address?: string;
+  notes?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Reservation {
+  id: number;
+  uuid: string;
+  reservation_number: string;
+  guest_id: number;
+  room_id?: number;
+  room_type_id: number;
+  check_in_date: string;
+  check_out_date: string;
+  nights: number;
+  adults: number;
+  children: number;
+  status: string;
+  source: string;
+  base_amount: number;
+  tax_amount: number;
+  total_amount: number;
+  advance_paid: number;
+  guest?: Guest;
+  is_active: boolean;
+  created_at: string;
+}
 
 export interface PropertyProfile {
   id: number;
@@ -284,20 +371,30 @@ export interface BusinessSettings {
 
 // ─── HTTP client ──────────────────────────────────────────────────────────────
 
-function getAuthHeaders(): HeadersInit {
-  const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("niralay_access_token")
-      : null;
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function onRefreshed(token: string) {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+}
+
+function addRefreshSubscriber(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
+}
+
+function getAuthHeaders(token?: string | null): HeadersInit {
+  const accessToken = token ?? tokenStorage.getAccess();
   return {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
   };
 }
 
 async function apiFetch<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  isRetry = false
 ): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -306,6 +403,55 @@ async function apiFetch<T>(
       ...(options.headers ?? {}),
     },
   });
+
+  if (res.status === 401 && !isRetry) {
+    if (path.includes("/auth/refresh") || path.includes("/auth/login")) {
+      // Don't intercept auth endpoints
+      throw new Error("Authentication failed");
+    }
+
+    if (isRefreshing) {
+      return new Promise<T>((resolve) => {
+        addRefreshSubscriber((newToken) => {
+          resolve(apiFetch<T>(path, options, true));
+        });
+      });
+    }
+
+    isRefreshing = true;
+    const refreshToken = tokenStorage.getRefresh();
+
+    if (!refreshToken) {
+      isRefreshing = false;
+      tokenStorage.clear();
+      if (typeof window !== "undefined") window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+
+    try {
+      const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!refreshRes.ok) throw new Error("Refresh failed");
+
+      const body = await refreshRes.json();
+      const tokens = body.data as TokenResponse;
+      
+      tokenStorage.set(tokens.access_token, tokens.refresh_token);
+      isRefreshing = false;
+      onRefreshed(tokens.access_token);
+      
+      return apiFetch<T>(path, options, true);
+    } catch (err) {
+      isRefreshing = false;
+      tokenStorage.clear();
+      if (typeof window !== "undefined") window.location.href = "/login";
+      throw new Error("Session expired");
+    }
+  }
 
   if (!res.ok) {
     let detail = res.statusText;
@@ -445,6 +591,66 @@ export const settingsApi = {
 
   update: (data: Partial<BusinessSettings>) =>
     apiFetch<SuccessResponse<BusinessSettings>>("/settings/business", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+};
+
+// ─── Auth API ─────────────────────────────────────────────────────────────────
+
+export const authApi = {
+  login: (data: any) =>
+    apiFetch<SuccessResponse<TokenResponse>>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  logout: () =>
+    apiFetch<SuccessResponse<any>>("/auth/logout", { method: "POST" }),
+  me: () =>
+    apiFetch<SuccessResponse<CurrentUser>>("/auth/me"),
+};
+
+// ─── Dashboard API ────────────────────────────────────────────────────────────
+
+export const dashboardApi = {
+  getWidgets: () =>
+    apiFetch<SuccessResponse<any>>("/dashboard/widgets"),
+};
+
+// ─── Reservations API ─────────────────────────────────────────────────────────
+
+export const guestApi = {
+  list: (params?: { search?: string; page?: number; size?: number }) =>
+    apiFetch<PaginatedResponse<Guest>>(
+      `/guests?${new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])
+        )
+      )}`
+    ),
+  create: (data: Partial<Guest>) =>
+    apiFetch<SuccessResponse<Guest>>("/guests", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+};
+
+export const reservationApi = {
+  list: (params?: { search?: string; status?: string; page?: number; size?: number }) =>
+    apiFetch<PaginatedResponse<Reservation>>(
+      `/reservations?${new URLSearchParams(
+        Object.fromEntries(
+          Object.entries(params ?? {}).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])
+        )
+      )}`
+    ),
+  create: (data: Partial<Reservation>) =>
+    apiFetch<SuccessResponse<Reservation>>("/reservations", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  update: (id: number, data: Partial<Reservation>) =>
+    apiFetch<SuccessResponse<Reservation>>(`/reservations/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
     }),

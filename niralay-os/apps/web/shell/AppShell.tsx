@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { PanelLeftClose, PanelLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { PanelLeftClose, PanelLeft, Loader2 } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { useAuth } from "@/providers/AuthProvider";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -12,6 +14,22 @@ interface AppShellProps {
 
 export function AppShell({ children, pageTitle }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 size={32} className="animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

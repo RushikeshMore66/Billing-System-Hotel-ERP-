@@ -24,6 +24,7 @@ from sqlalchemy import (
     Table,
     Text,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -55,7 +56,7 @@ role_permissions = Table(
         "granted_at",
         DateTime(timezone=True),
         nullable=False,
-        server_default=func.now(),
+        server_default=text("CURRENT_TIMESTAMP"),
     ),
     Column("granted_by", String(255), nullable=True),
 )

@@ -14,7 +14,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from app.core.environment import Environment
 
 # Project root (apps/api/)
-_API_ROOT = Path(__file__).resolve().parents[3]
+# settings.py is at: apps/api/app/core/settings.py
+# parents[0] = apps/api/app/core
+# parents[1] = apps/api/app
+# parents[2] = apps/api   <-- correct API root where .env lives
+_API_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):

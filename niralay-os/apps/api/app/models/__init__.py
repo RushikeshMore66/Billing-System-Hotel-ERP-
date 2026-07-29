@@ -45,6 +45,10 @@ from app.models.restaurant import (
 from app.models.organization import Department, Designation, GuestIDType
 from app.models.settings import BusinessSettings
 
+# ── Phase 2: Reservations ───────────────────────────────────────────────────
+from app.models.guest import Guest
+from app.models.reservation import Reservation, ReservationStatusHistory
+
 __all__ = [
     # identity
     "User",
@@ -87,4 +91,8 @@ __all__ = [
     "GuestIDType",
     # settings
     "BusinessSettings",
+    # reservations
+    "Guest",
+    "Reservation",
+    "ReservationStatusHistory",
 ]

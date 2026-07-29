@@ -102,7 +102,6 @@ class Designation(AuditMixin, Base):
 
     __table_args__ = (
         UniqueConstraint("code", name="uq_designations_code"),
-        Index("ix_designations_department_id", "department_id"),
     )
 
 

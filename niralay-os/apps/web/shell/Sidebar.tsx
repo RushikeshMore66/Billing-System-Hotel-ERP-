@@ -17,6 +17,7 @@ import {
   Sparkles,
   Building2,
 } from "lucide-react";
+import { useAuth } from "@/providers/AuthProvider";
 
 // ─── Navigation Structure ─────────────────────────────────────
 
@@ -58,10 +59,16 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed = false }: SidebarProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard" || pathname === "/";
     return pathname.startsWith(href);
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return "U";
+    return name.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase();
   };
 
   return (
@@ -140,36 +147,38 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
 
       {/* ── User Profile ── */}
       <div className="shrink-0 px-3 pb-4 pt-3 border-t border-border">
-        <div
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-background cursor-pointer transition-all duration-150 ${
-            collapsed ? "justify-center" : ""
-          }`}
-        >
-          {/* Avatar */}
+        <Link href="/settings" passHref>
           <div
-            className="flex items-center justify-center rounded-full shrink-0 font-semibold text-sm text-white"
-            style={{
-              width: 34,
-              height: 34,
-              background: "linear-gradient(135deg, #49617A, #5d7a99)",
-            }}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-background cursor-pointer transition-all duration-150 ${
+              collapsed ? "justify-center" : ""
+            }`}
           >
-            RK
-          </div>
-          {!collapsed && (
-            <div className="overflow-hidden flex-1">
-              <p className="text-sm font-semibold text-text-primary truncate leading-none">
-                Rushi Kumar
-              </p>
-              <p className="text-xs text-text-secondary mt-0.5 truncate">
-                Manager
-              </p>
+            {/* Avatar */}
+            <div
+              className="flex items-center justify-center rounded-full shrink-0 font-semibold text-sm text-white"
+              style={{
+                width: 34,
+                height: 34,
+                background: "linear-gradient(135deg, #49617A, #5d7a99)",
+              }}
+            >
+              {getInitials(user?.full_name || "")}
             </div>
-          )}
-          {!collapsed && (
-            <Settings size={14} className="text-text-secondary shrink-0" />
-          )}
-        </div>
+            {!collapsed && (
+              <div className="overflow-hidden flex-1">
+                <p className="text-sm font-semibold text-text-primary truncate leading-none">
+                  {user?.full_name || "User"}
+                </p>
+                <p className="text-xs text-text-secondary mt-0.5 truncate capitalize">
+                  {user?.roles?.[0]?.replace("_", " ") || "Staff"}
+                </p>
+              </div>
+            )}
+            {!collapsed && (
+              <Settings size={14} className="text-text-secondary shrink-0" />
+            )}
+          </div>
+        </Link>
       </div>
     </aside>
   );

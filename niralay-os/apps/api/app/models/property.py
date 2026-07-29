@@ -475,7 +475,6 @@ class Tax(AuditMixin, Base):
 
     __table_args__ = (
         UniqueConstraint("code", name="uq_taxes_code"),
-        Index("ix_taxes_is_active", "is_active"),
     )
 
 
