@@ -143,10 +143,6 @@ class Settings(BaseSettings):
     EMAILS_FROM_NAME: str = "NiralayOS"
     EMAILS_FROM_ADDRESS: str = "noreply@niralayos.com"
 
-    # ------------------------------------------------------------------
-    # Redis (optional — for caching / task queue)
-    # ------------------------------------------------------------------
-    REDIS_URL: str = ""
 
     # ------------------------------------------------------------------
     # Property helpers

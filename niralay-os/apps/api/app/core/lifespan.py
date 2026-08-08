@@ -4,7 +4,7 @@ FastAPI application lifespan context manager.
 Manages startup and shutdown events:
   - Configure logging
   - Verify database connectivity
-  - (Future) Start background workers, connect Redis, etc.
+  - (Future) Start background workers, etc.
 
 Usage in main.py:
     app = FastAPI(lifespan=lifespan)
@@ -78,4 +78,4 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # ---- Shutdown -------------------------------------------------------
     logger.info("Shutting down %s", cfg.APP_NAME)
-    # Future: close Redis connections, stop background tasks, etc.
+    # Future: stop background tasks, etc.

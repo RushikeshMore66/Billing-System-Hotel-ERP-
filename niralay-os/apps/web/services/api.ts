@@ -406,8 +406,15 @@ async function apiFetch<T>(
 
   if (res.status === 401 && !isRetry) {
     if (path.includes("/auth/refresh") || path.includes("/auth/login")) {
-      // Don't intercept auth endpoints
-      throw new Error("Authentication failed");
+      // Extract real error message from API response body
+      let detail = "Authentication failed";
+      try {
+        const body = await res.json();
+        detail = body?.detail ?? body?.message ?? detail;
+      } catch {
+        // ignore
+      }
+      throw new Error(detail);
     }
 
     if (isRefreshing) {

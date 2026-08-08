@@ -651,46 +651,23 @@ def upgrade() -> None:
     )
 
     # ── New permissions for property config module ────────────────────
-    op.bulk_insert(
-        sa.table(
-            "permissions",
-            sa.column("code"), sa.column("name"), sa.column("module"),
-            sa.column("description"), sa.column("is_system"),
-            sa.column("is_active"), sa.column("created_at"), sa.column("updated_at"),
-        ),
-        [
-            {"code": "property:view", "name": "View Property Config",
-             "module": "property", "description": "View all property configuration",
-             "is_system": True, "is_active": True, "created_at": now, "updated_at": now},
-            {"code": "property:create", "name": "Create Property Config",
-             "module": "property", "description": "Create floors, rooms, room types etc.",
-             "is_system": True, "is_active": True, "created_at": now, "updated_at": now},
-            {"code": "property:update", "name": "Update Property Config",
-             "module": "property", "description": "Update property configuration records",
-             "is_system": True, "is_active": True, "created_at": now, "updated_at": now},
-            {"code": "property:delete", "name": "Delete Property Config",
-             "module": "property", "description": "Soft-delete property configuration records",
-             "is_system": True, "is_active": True, "created_at": now, "updated_at": now},
-            {"code": "restaurant:config:view", "name": "View Restaurant Config",
-             "module": "restaurant", "description": "View restaurant menus and tables",
-             "is_system": True, "is_active": True, "created_at": now, "updated_at": now},
-            {"code": "restaurant:config:manage", "name": "Manage Restaurant Config",
-             "module": "restaurant", "description": "Full CRUD on restaurant configuration",
-             "is_system": True, "is_active": True, "created_at": now, "updated_at": now},
-            {"code": "organization:view", "name": "View Organization Config",
-             "module": "organization", "description": "View departments and designations",
-             "is_system": True, "is_active": True, "created_at": now, "updated_at": now},
-            {"code": "organization:manage", "name": "Manage Organization Config",
-             "module": "organization", "description": "Manage departments, designations, guest ID types",
-             "is_system": True, "is_active": True, "created_at": now, "updated_at": now},
-            {"code": "settings:view", "name": "View Business Settings",
-             "module": "settings", "description": "View business settings",
-             "is_system": True, "is_active": True, "created_at": now, "updated_at": now},
-            {"code": "settings:manage", "name": "Manage Business Settings",
-             "module": "settings", "description": "Update business settings",
-             "is_system": True, "is_active": True, "created_at": now, "updated_at": now},
-        ],
-    )
+    # Use raw SQL so gen_random_uuid() fills the non-null uuid column
+    # and the required action column is populated correctly.
+    op.execute(sa.text("""
+        INSERT INTO permissions (uuid, code, module, action, description, is_active, created_at, updated_at)
+        VALUES
+            (gen_random_uuid(), 'property:view',            'property',     'view',   'View all property configuration',                   true, now(), now()),
+            (gen_random_uuid(), 'property:create',          'property',     'create', 'Create floors, rooms, room types etc.',              true, now(), now()),
+            (gen_random_uuid(), 'property:update',          'property',     'update', 'Update property configuration records',              true, now(), now()),
+            (gen_random_uuid(), 'property:delete',          'property',     'delete', 'Soft-delete property configuration records',         true, now(), now()),
+            (gen_random_uuid(), 'restaurant:config:view',   'restaurant',   'config:view',   'View restaurant menus and tables',            true, now(), now()),
+            (gen_random_uuid(), 'restaurant:config:manage', 'restaurant',   'config:manage', 'Full CRUD on restaurant configuration',       true, now(), now()),
+            (gen_random_uuid(), 'organization:view',        'organization', 'view',   'View departments and designations',                  true, now(), now()),
+            (gen_random_uuid(), 'organization:manage',      'organization', 'manage', 'Manage departments, designations, guest ID types',   true, now(), now()),
+            (gen_random_uuid(), 'settings:view',            'settings',     'view',   'View business settings',                            true, now(), now()),
+            (gen_random_uuid(), 'settings:manage',          'settings',     'manage', 'Update business settings',                          true, now(), now())
+        ON CONFLICT (code) DO NOTHING
+    """))
 
 
 def downgrade() -> None:
