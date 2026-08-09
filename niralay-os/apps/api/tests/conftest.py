@@ -38,12 +38,18 @@ import app.database.session as _session_mod  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Shared SQLite engine for the entire test session
+#
+# Uses in-memory SQLite with StaticPool so all connections share the same
+# in-memory database.  No stale files, no index-already-exists errors.
 # ---------------------------------------------------------------------------
-TEST_DATABASE_URL = "sqlite:///./test_niralayos.db"
+from sqlalchemy.pool import StaticPool
+
+TEST_DATABASE_URL = "sqlite://"
 
 _test_engine = create_engine(
     TEST_DATABASE_URL,
     connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
 )
 _TestingSessionLocal = sessionmaker(
     bind=_test_engine,
@@ -71,10 +77,15 @@ def override_get_db() -> Generator[Session, None, None]:
 # ---------------------------------------------------------------------------
 @pytest.fixture(scope="session", autouse=True)
 def create_test_tables():
-    """Create all tables in the SQLite test database once per session."""
+    """Create all tables in the SQLite test database once per session.
+
+    The stale DB file was already deleted at module import time, so
+    create_all() always starts from a blank slate.
+    """
     Base.metadata.create_all(bind=_test_engine)
     yield
     Base.metadata.drop_all(bind=_test_engine)
+
 
 
 @pytest.fixture(scope="session")

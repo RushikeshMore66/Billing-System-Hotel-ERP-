@@ -33,13 +33,22 @@ from app.services.dashboard import (
     DashboardOverviewService,
     RevenueService,
     OccupancyService,
-    ReservationService,
+    ReservationService as DashboardReservationService,
     RestaurantService,
     FinanceService,
-    InventoryService,
+    InventoryService as DashboardInventoryService,
     EmployeeService,
     ActivityService,
 )
+
+# ── Sprint 5: Inventory, Expenses, Billing ───────────────────────────────────
+from app.services.inventory import (
+    InventoryCategoryService,
+    StoreLocationService,
+    InventoryItemService,
+)
+from app.services.expense import ExpenseCategoryService, ExpenseService
+from app.services.billing import BillingService
 
 __all__ = [
     "AuditService",
@@ -50,11 +59,20 @@ __all__ = [
     "DashboardOverviewService",
     "RevenueService",
     "OccupancyService",
-    "ReservationService",
+    "DashboardReservationService",
     "RestaurantService",
     "FinanceService",
-    "InventoryService",
+    "DashboardInventoryService",
     "EmployeeService",
     "ActivityService",
+    # Inventory
+    "InventoryCategoryService",
+    "StoreLocationService",
+    "InventoryItemService",
+    # Expenses
+    "ExpenseCategoryService",
+    "ExpenseService",
+    # Billing
+    "BillingService",
 ]
 

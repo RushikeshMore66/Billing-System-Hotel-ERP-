@@ -576,6 +576,9 @@ export const restaurantApi = {
 
   getTableStatusSummary: () =>
     apiFetch<SuccessResponse<Record<string, number>>>("/restaurant/tables/status-summary"),
+
+  listMenuCategories: () =>
+    apiFetch<SuccessResponse<any[]>>("/restaurant/menu-categories"),
 };
 
 // ─── Organisation API ─────────────────────────────────────────────────────────
@@ -622,6 +625,16 @@ export const authApi = {
 export const dashboardApi = {
   getWidgets: () =>
     apiFetch<SuccessResponse<any>>("/dashboard/widgets"),
+  getOverview: () =>
+    apiFetch<SuccessResponse<DashboardOverview>>("/dashboard/overview"),
+  getRevenueWidget: () =>
+    apiFetch<SuccessResponse<any>>("/dashboard/revenue"),
+  getOccupancyWidget: () =>
+    apiFetch<SuccessResponse<any>>("/dashboard/occupancy"),
+  getInventoryWidget: () =>
+    apiFetch<SuccessResponse<any>>("/dashboard/inventory"),
+  getFinanceWidget: () =>
+    apiFetch<SuccessResponse<any>>("/dashboard/finance"),
 };
 
 // ─── Reservations API ─────────────────────────────────────────────────────────
@@ -662,3 +675,418 @@ export const reservationApi = {
       body: JSON.stringify(data),
     }),
 };
+
+// ─── Inventory API ────────────────────────────────────────────────────────────
+
+export interface InventoryCategory {
+  id: number;
+  uuid: string;
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  display_order: number;
+  is_active: boolean;
+}
+
+export interface StoreLocation {
+  id: number;
+  uuid: string;
+  name: string;
+  code: string;
+  description?: string;
+  display_order: number;
+}
+
+export interface InventoryItem {
+  id: number;
+  uuid: string;
+  sku: string;
+  name: string;
+  description?: string;
+  category_id?: number;
+  category?: { id: number; name: string; color?: string; icon?: string };
+  location_id?: number;
+  location?: { id: number; name: string; code: string };
+  unit: string;
+  item_type: string;
+  current_stock: number;
+  minimum_stock: number;
+  reorder_level?: number;
+  maximum_stock?: number;
+  purchase_price?: number;
+  supplier_name?: string;
+  supplier_contact?: string;
+  has_expiry: boolean;
+  expiry_date?: string;
+  batch_number?: string;
+  tax_rate?: number;
+  notes?: string;
+  image_url?: string;
+  stock_level: "ok" | "low" | "critical";
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StockMovement {
+  id: number;
+  item_id: number;
+  movement_type: string;
+  quantity: number;
+  stock_before: number;
+  stock_after: number;
+  unit_cost?: number;
+  total_cost?: number;
+  reference_type?: string;
+  reference_id?: string;
+  supplier_name?: string;
+  notes?: string;
+  movement_date: string;
+  recorded_by?: string;
+  created_at: string;
+}
+
+function buildParams(params: Record<string, any>): string {
+  return new URLSearchParams(
+    Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])
+    )
+  ).toString();
+}
+
+export const inventoryApi = {
+  // Categories
+  listCategories: () =>
+    apiFetch<SuccessResponse<InventoryCategory[]>>("/inventory/categories"),
+  createCategory: (data: Partial<InventoryCategory>) =>
+    apiFetch<SuccessResponse<InventoryCategory>>("/inventory/categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  updateCategory: (id: number, data: Partial<InventoryCategory>) =>
+    apiFetch<SuccessResponse<InventoryCategory>>(`/inventory/categories/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  deleteCategory: (id: number) =>
+    apiFetch<SuccessResponse<null>>(`/inventory/categories/${id}`, { method: "DELETE" }),
+
+  // Locations
+  listLocations: () =>
+    apiFetch<SuccessResponse<StoreLocation[]>>("/inventory/locations"),
+  createLocation: (data: Partial<StoreLocation>) =>
+    apiFetch<SuccessResponse<StoreLocation>>("/inventory/locations", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  deleteLocation: (id: number) =>
+    apiFetch<SuccessResponse<null>>(`/inventory/locations/${id}`, { method: "DELETE" }),
+
+  // Items
+  listItems: (params?: {
+    search?: string;
+    category_id?: number;
+    location_id?: number;
+    item_type?: string;
+    stock_level?: string;
+    page?: number;
+    size?: number;
+  }) =>
+    apiFetch<PaginatedResponse<InventoryItem>>(`/inventory/items?${buildParams(params ?? {})}`),
+  createItem: (data: Partial<InventoryItem> & { current_stock?: number }) =>
+    apiFetch<SuccessResponse<InventoryItem>>("/inventory/items", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getItem: (id: number) =>
+    apiFetch<SuccessResponse<InventoryItem>>(`/inventory/items/${id}`),
+  updateItem: (id: number, data: Partial<InventoryItem>) =>
+    apiFetch<SuccessResponse<InventoryItem>>(`/inventory/items/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  deleteItem: (id: number) =>
+    apiFetch<SuccessResponse<null>>(`/inventory/items/${id}`, { method: "DELETE" }),
+  getLowStockAlerts: (limit?: number) =>
+    apiFetch<SuccessResponse<InventoryItem[]>>(`/inventory/items/alerts${limit ? `?limit=${limit}` : ""}`),
+
+  // Movements
+  recordMovement: (itemId: number, data: Partial<StockMovement> & { movement_type: string; quantity: number }) =>
+    apiFetch<SuccessResponse<StockMovement>>(`/inventory/items/${itemId}/movements`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  listMovements: (itemId: number, params?: { page?: number; size?: number }) =>
+    apiFetch<PaginatedResponse<StockMovement>>(
+      `/inventory/items/${itemId}/movements?${buildParams(params ?? {})}`
+    ),
+};
+
+// ─── Expenses API ─────────────────────────────────────────────────────────────
+
+export interface ExpenseCategory {
+  id: number;
+  uuid: string;
+  name: string;
+  description?: string;
+  display_order: number;
+  is_system: boolean;
+  is_active: boolean;
+}
+
+export interface Expense {
+  id: number;
+  uuid: string;
+  category_id?: number;
+  category?: { id: number; name: string };
+  description: string;
+  amount: number;
+  tax_amount: number;
+  total_amount: number;
+  expense_date: string;
+  payment_method?: string;
+  vendor_name?: string;
+  vendor_contact?: string;
+  reference_number?: string;
+  notes?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export const expenseApi = {
+  listCategories: () =>
+    apiFetch<SuccessResponse<ExpenseCategory[]>>("/expenses/categories"),
+  createCategory: (data: { name: string; description?: string }) =>
+    apiFetch<SuccessResponse<ExpenseCategory>>("/expenses/categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  list: (params?: {
+    search?: string;
+    category_id?: number;
+    payment_method?: string;
+    date_from?: string;
+    date_to?: string;
+    page?: number;
+    size?: number;
+  }) =>
+    apiFetch<PaginatedResponse<Expense>>(`/expenses?${buildParams(params ?? {})}`),
+  create: (data: Partial<Expense>) =>
+    apiFetch<SuccessResponse<Expense>>("/expenses", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  update: (id: number, data: Partial<Expense>) =>
+    apiFetch<SuccessResponse<Expense>>(`/expenses/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  delete: (id: number) =>
+    apiFetch<SuccessResponse<null>>(`/expenses/${id}`, { method: "DELETE" }),
+};
+
+// ─── Billing API ──────────────────────────────────────────────────────────────
+
+export interface BillItem {
+  id: number;
+  bill_id: number;
+  item_type: string;
+  description: string;
+  menu_item_id?: number;
+  quantity: number;
+  unit_price: number;
+  discount_pct: number;
+  tax_rate: number;
+  amount: number;
+  tax_amount: number;
+  total: number;
+  notes?: string;
+}
+
+export interface PaymentRecord {
+  id: number;
+  uuid: string;
+  bill_id: number;
+  amount: number;
+  payment_date: string;
+  status: string;
+  payment_type?: string;
+  reference_number?: string;
+  transaction_id?: string;
+  notes?: string;
+  received_by?: string;
+}
+
+export interface Bill {
+  id: number;
+  uuid: string;
+  bill_number: string;
+  bill_date: string;
+  bill_type: string;
+  reservation_id?: number;
+  guest_id?: number;
+  table_number?: string;
+  subtotal: number;
+  discount_amount: number;
+  tax_amount: number;
+  total_amount: number;
+  amount_paid: number;
+  amount_due: number;
+  status: string;
+  notes?: string;
+  gst_number?: string;
+  void_reason?: string;
+  items: BillItem[];
+  payments: PaymentRecord[];
+  created_at: string;
+}
+
+export const billingApi = {
+  listBills: (params?: {
+    search?: string;
+    status?: string;
+    bill_type?: string;
+    reservation_id?: number;
+    guest_id?: number;
+    date_from?: string;
+    date_to?: string;
+    page?: number;
+    size?: number;
+  }) =>
+    apiFetch<PaginatedResponse<Bill>>(`/billing/bills?${buildParams(params ?? {})}`),
+  createBill: (data: {
+    reservation_id?: number;
+    guest_id?: number;
+    table_number?: string;
+    bill_type?: string;
+    items?: Partial<BillItem>[];
+    notes?: string;
+    gst_number?: string;
+  }) =>
+    apiFetch<SuccessResponse<Bill>>("/billing/bills", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getBill: (id: number) =>
+    apiFetch<SuccessResponse<Bill>>(`/billing/bills/${id}`),
+  addItems: (id: number, items: Partial<BillItem>[]) =>
+    apiFetch<SuccessResponse<Bill>>(`/billing/bills/${id}/items`, {
+      method: "POST",
+      body: JSON.stringify(items),
+    }),
+  issueBill: (id: number) =>
+    apiFetch<SuccessResponse<Bill>>(`/billing/bills/${id}/issue`, { method: "POST" }),
+  recordPayment: (id: number, data: { amount: number; payment_type?: string; reference_number?: string; notes?: string }) =>
+    apiFetch<SuccessResponse<PaymentRecord>>(`/billing/bills/${id}/payments`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  voidBill: (id: number, reason: string) =>
+    apiFetch<SuccessResponse<Bill>>(`/billing/bills/${id}/void?reason=${encodeURIComponent(reason)}`, {
+      method: "POST",
+    }),
+};
+
+// ─── Dashboard types ──────────────────────────────────────────────────────────
+
+export interface DashboardKPI {
+  today: number;
+  yesterday: number;
+  change_pct: number;
+  hotel_revenue: number;
+  restaurant_revenue: number;
+  other_revenue: number;
+}
+
+export interface DashboardOccupancy {
+  total_rooms: number;
+  occupied_rooms: number;
+  available_rooms: number;
+  occupancy_pct: number;
+  current_guests: number;
+}
+
+export interface DashboardReservation {
+  id: number;
+  reservation_number: string;
+  guest_name: string;
+  room_number?: string;
+  room_type?: string;
+  check_in: string;
+  check_out: string;
+  nights: number;
+  amount: number;
+  status: string;
+  source: string;
+  created_at: string;
+}
+
+export interface InventoryAlert {
+  id: number;
+  item_name: string;
+  current_quantity: number;
+  unit: string;
+  minimum_quantity: number;
+  level: "ok" | "low" | "critical";
+  category?: string;
+}
+
+export interface ActivityItem {
+  id: number;
+  event_type: string;
+  description: string;
+  actor?: string;
+  resource_id?: string;
+  metadata: Record<string, any>;
+  occurred_at: string;
+}
+
+export interface DashboardOverview {
+  kpis: {
+    revenue: DashboardKPI;
+    occupancy: DashboardOccupancy;
+    reservation: {
+      today_total: number;
+      today_checkins: number;
+      today_checkouts: number;
+      pending_arrivals: number;
+    };
+    restaurant: {
+      active_orders: number;
+      today_revenue: number;
+      dine_in_orders: number;
+      room_service_orders: number;
+      takeaway_orders: number;
+    };
+    finance: {
+      pending_payments: number;
+      pending_count: number;
+      monthly_revenue: number;
+      net_profit_est: number;
+    };
+    inventory: {
+      low_stock_count: number;
+      critical_count: number;
+      ok_count: number;
+    };
+    employee: {
+      total_active: number;
+      present_today: number;
+      on_leave: number;
+    };
+    as_of: string;
+  };
+  today_reservations: DashboardReservation[];
+  inventory_alerts: InventoryAlert[];
+  recent_activities: ActivityItem[];
+  charts: {
+    revenue_trend: Array<{ day: string; date: string; revenue: number; last_week: number }>;
+    occupancy_trend: Array<{ hour: string; hotel_pct: number; restaurant_pct: number }>;
+    reservation_trend: Array<{ date: string; new_reservations: number; check_ins: number; check_outs: number }>;
+    cash_flow_trend: Array<{ date: string; inflow: number; outflow: number; net: number }>;
+    monthly_revenue: Array<{ month: string; year: number; total: number; hotel: number; restaurant: number }>;
+  };
+  as_of: string;
+}

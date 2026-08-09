@@ -22,6 +22,12 @@ from app.api.v1.business_settings import router as business_settings_router
 from app.api.v1.guests import router as guests_router
 from app.api.v1.reservations import router as reservations_router
 
+# ---- Sprint 5: Inventory, Expenses, Billing, Uploads ----
+from app.api.v1.inventory import router as inventory_router
+from app.api.v1.expenses import router as expenses_router
+from app.api.v1.billing import router as billing_router
+from app.api.v1.uploads import router as uploads_router
+
 settings = get_settings()
 
 api_router = APIRouter(prefix=settings.API_PREFIX)
@@ -47,3 +53,9 @@ api_router.include_router(business_settings_router)
 # ---- Sprint 4: Reservations Platform ----
 api_router.include_router(guests_router)
 api_router.include_router(reservations_router)
+
+# ---- Sprint 5: Inventory, Expenses, Billing, Uploads ----
+api_router.include_router(inventory_router)
+api_router.include_router(expenses_router)
+api_router.include_router(billing_router)
+api_router.include_router(uploads_router)

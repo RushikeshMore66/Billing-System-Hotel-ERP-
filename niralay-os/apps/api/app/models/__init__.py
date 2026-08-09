@@ -15,6 +15,9 @@ from app.models.role import Role, Permission, role_permissions
 from app.models.session import Session, RefreshToken
 from app.models.audit_log import AuditLog
 
+# ── File Uploads (must come before models that FK into it) ───────────────────
+from app.models.file_upload import UploadedFile
+
 # ── Sprint 3: Property Configuration ────────────────────────────────────────
 from app.models.property import (
     PropertyProfile,
@@ -49,6 +52,20 @@ from app.models.settings import BusinessSettings
 from app.models.guest import Guest
 from app.models.reservation import Reservation, ReservationStatusHistory
 
+# ── Inventory ────────────────────────────────────────────────────────────────
+from app.models.inventory import (
+    InventoryCategory,
+    StoreLocation,
+    InventoryItem,
+    StockMovement,
+)
+
+# ── Expenses ─────────────────────────────────────────────────────────────────
+from app.models.expense import ExpenseCategory, Expense
+
+# ── Billing ──────────────────────────────────────────────────────────────────
+from app.models.billing import Bill, BillItem, Payment
+
 __all__ = [
     # identity
     "User",
@@ -61,6 +78,8 @@ __all__ = [
     "Session",
     "RefreshToken",
     "AuditLog",
+    # file uploads
+    "UploadedFile",
     # property config
     "PropertyProfile",
     "Floor",
@@ -95,4 +114,16 @@ __all__ = [
     "Guest",
     "Reservation",
     "ReservationStatusHistory",
+    # inventory
+    "InventoryCategory",
+    "StoreLocation",
+    "InventoryItem",
+    "StockMovement",
+    # expenses
+    "ExpenseCategory",
+    "Expense",
+    # billing
+    "Bill",
+    "BillItem",
+    "Payment",
 ]

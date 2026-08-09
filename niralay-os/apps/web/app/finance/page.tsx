@@ -1,136 +1,268 @@
 "use client";
 
-import { TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDownRight, BarChart3, Download } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { useState, useEffect, useCallback } from "react";
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  BarChart3,
+  Download,
+  RefreshCw,
+  AlertCircle,
+  Plus,
+  Search,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+} from "recharts";
+import { dashboardApi, expenseApi, billingApi, type Expense } from "@/services/api";
 
-const monthlyRevenue = [
-  { month: "Jan", revenue: 1240000, expense: 780000 },
-  { month: "Feb", revenue: 980000, expense: 650000 },
-  { month: "Mar", revenue: 1450000, expense: 890000 },
-  { month: "Apr", revenue: 1680000, expense: 920000 },
-  { month: "May", revenue: 1920000, expense: 1050000 },
-  { month: "Jun", revenue: 2150000, expense: 1120000 },
-  { month: "Jul", revenue: 1842500, expense: 980000 },
-];
+function fmt(amount: number): string {
+  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`;
+  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
+  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
+  return `₹${amount.toLocaleString("en-IN")}`;
+}
 
-const transactions = [
-  { id: "TXN-001", description: "Room Revenue - July", type: "income", amount: 1120000, date: "Jul 14", category: "Rooms" },
-  { id: "TXN-002", description: "Restaurant Revenue - July", type: "income", amount: 580000, date: "Jul 14", category: "Restaurant" },
-  { id: "TXN-003", description: "Staff Salaries - July", type: "expense", amount: 420000, date: "Jul 10", category: "HR" },
-  { id: "TXN-004", description: "Inventory Purchase", type: "expense", amount: 85000, date: "Jul 9", category: "Inventory" },
-  { id: "TXN-005", description: "Event Revenue - Corporate", type: "income", amount: 142500, date: "Jul 8", category: "Events" },
-  { id: "TXN-006", description: "Utility Bills", type: "expense", amount: 65000, date: "Jul 5", category: "Utilities" },
-  { id: "TXN-007", description: "Maintenance & Repairs", type: "expense", amount: 38000, date: "Jul 3", category: "Maintenance" },
-  { id: "TXN-008", description: "Minibar Revenue", type: "income", amount: 28000, date: "Jul 2", category: "Rooms" },
-];
+const PM_LABELS: Record<string, string> = {
+  cash: "Cash",
+  upi: "UPI",
+  credit_card: "Credit Card",
+  debit_card: "Debit Card",
+  bank_transfer: "Bank Transfer",
+  other: "Other",
+};
 
 export default function FinancePage() {
-  const totalRevenue = monthlyRevenue[monthlyRevenue.length - 1].revenue;
-  const totalExpense = monthlyRevenue[monthlyRevenue.length - 1].expense;
-  const netProfit = totalRevenue - totalExpense;
-  const profitMargin = ((netProfit / totalRevenue) * 100).toFixed(1);
+  const [financeWidget, setFinanceWidget] = useState<any>(null);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
+  const [cashFlow, setCashFlow] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenseTotal, setExpenseTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [finRes, expRes, overviewRes] = await Promise.all([
+        dashboardApi.getFinanceWidget(),
+        expenseApi.list({ size: 10 }),
+        dashboardApi.getOverview(),
+      ]);
+      setFinanceWidget(finRes.data);
+      setExpenses(expRes.items);
+      setExpenseTotal(expRes.total);
+      setCashFlow(overviewRes.data.charts.cash_flow_trend ?? []);
+      setMonthlyRevenue(overviewRes.data.charts.monthly_revenue ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load finance data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const kpis = financeWidget?.kpi;
+  const monthlyRev = kpis?.monthly_revenue ?? 0;
+  const netProfit = kpis?.net_profit_est ?? 0;
+  const pending = kpis?.pending_payments ?? 0;
 
   return (
     <div className="p-6 space-y-5 animate-fade-in">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="ndl-page-title">Finance</h1>
-          <p className="text-text-secondary text-sm mt-1">Revenue, expenses and profit overview — July 2025</p>
+          <p className="text-text-secondary text-sm mt-1">
+            Revenue, expenses and profit from real billing data
+          </p>
         </div>
-        <button className="ndl-btn-secondary gap-2 text-sm"><Download size={15} /> Export Report</button>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchData} className="ndl-btn-secondary gap-2" disabled={loading}>
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+          <button className="ndl-btn-secondary gap-2 text-sm">
+            <Download size={15} /> Export
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700">
+          <AlertCircle size={16} />
+          <span className="text-sm">{error}</span>
+          <button onClick={fetchData} className="ml-auto text-xs underline">Retry</button>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Revenue", value: `₹${(totalRevenue / 100000).toFixed(1)}L`, change: "+18.4%", positive: true, icon: TrendingUp, color: "#155E4B" },
-          { label: "Total Expenses", value: `₹${(totalExpense / 100000).toFixed(1)}L`, change: "-3.2%", positive: true, icon: TrendingDown, color: "#49617A" },
-          { label: "Net Profit", value: `₹${(netProfit / 100000).toFixed(1)}L`, change: "+24.1%", positive: true, icon: DollarSign, color: "#D4AF37" },
-          { label: "Profit Margin", value: `${profitMargin}%`, change: "+2.3%", positive: true, icon: BarChart3, color: "#16A34A" },
+          { label: "Monthly Revenue", value: fmt(monthlyRev), icon: TrendingUp, color: "#155E4B" },
+          { label: "Net Profit (Est.)", value: fmt(netProfit), icon: DollarSign, color: "#D4AF37" },
+          { label: "Pending Payments", value: fmt(pending), icon: TrendingDown, color: "#DC2626" },
+          {
+            label: "Profit Margin",
+            value: monthlyRev > 0 ? `${((netProfit / monthlyRev) * 100).toFixed(1)}%` : "—",
+            icon: BarChart3,
+            color: "#49617A",
+          },
         ].map((kpi) => (
           <div key={kpi.label} className="ndl-card p-5">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center justify-center rounded-xl" style={{ width: 40, height: 40, background: `${kpi.color}18` }}>
-                <kpi.icon size={18} style={{ color: kpi.color }} />
+            {loading ? (
+              <div className="animate-pulse space-y-2">
+                <div className="h-4 bg-gray-100 rounded w-24" />
+                <div className="h-8 bg-gray-100 rounded w-20" />
               </div>
-              <span className={`flex items-center gap-0.5 text-xs font-semibold px-2 py-1 rounded-lg ${kpi.positive ? "text-success bg-success-50" : "text-danger bg-danger-50"}`}>
-                {kpi.positive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}{kpi.change}
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-text-primary">{kpi.value}</p>
-            <p className="text-sm text-text-secondary mt-1">{kpi.label}</p>
+            ) : (
+              <>
+                <div
+                  className="flex items-center justify-center rounded-xl mb-4"
+                  style={{ width: 40, height: 40, background: `${kpi.color}18` }}
+                >
+                  <kpi.icon size={18} style={{ color: kpi.color }} />
+                </div>
+                <p className="text-text-secondary text-xs font-medium mb-1">{kpi.label}</p>
+                <p className="text-2xl font-bold text-text-primary">{kpi.value}</p>
+              </>
+            )}
           </div>
         ))}
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Monthly revenue */}
         <div className="ndl-card p-5">
-          <h2 className="ndl-section-title mb-1">Revenue vs Expenses</h2>
-          <p className="text-sm text-text-secondary mb-5">January — July 2025</p>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={monthlyRevenue} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`} />
-              <Tooltip formatter={(v: any) => [`₹${((v as number) / 100000).toFixed(2)}L`]} contentStyle={{ borderRadius: 12, border: "1px solid #E5E7EB", fontSize: 12 }} />
-              <Bar dataKey="revenue" fill="#155E4B" radius={[6, 6, 0, 0]} name="Revenue" />
-              <Bar dataKey="expense" fill="#E5E7EB" radius={[6, 6, 0, 0]} name="Expenses" />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="mb-4">
+            <h3 className="font-semibold text-text-primary text-sm">Monthly Revenue</h3>
+            <p className="text-xs text-text-secondary">Last 6 months (Hotel + Restaurant)</p>
+          </div>
+          {monthlyRevenue.some((m) => m.total > 0) ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={monthlyRevenue}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis tickFormatter={(v) => fmt(v)} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <Tooltip formatter={(v: number) => [fmt(v), ""]} />
+                <Bar dataKey="hotel" fill="#155E4B" name="Hotel" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="restaurant" fill="#A7D3C5" name="Restaurant" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[200px] text-text-secondary">
+              <BarChart3 size={32} className="mb-2 opacity-20" />
+              <p className="text-sm">No billing data yet</p>
+              <p className="text-xs opacity-60 mt-1">Create bills to see revenue here</p>
+            </div>
+          )}
         </div>
 
+        {/* Cash flow */}
         <div className="ndl-card p-5">
-          <h2 className="ndl-section-title mb-1">Profit Trend</h2>
-          <p className="text-sm text-text-secondary mb-5">Net profit by month</p>
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={monthlyRevenue.map((d) => ({ ...d, profit: d.revenue - d.expense }))} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#D4AF37" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: "#6B7280" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`} />
-              <Tooltip formatter={(v: any) => [`₹${((v as number) / 100000).toFixed(2)}L`]} contentStyle={{ borderRadius: 12, border: "1px solid #E5E7EB", fontSize: 12 }} />
-              <Area type="monotone" dataKey="profit" stroke="#D4AF37" strokeWidth={2.5} fill="url(#profitGrad)" name="Net Profit" />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div className="mb-4">
+            <h3 className="font-semibold text-text-primary text-sm">Cash Flow (30 days)</h3>
+            <p className="text-xs text-text-secondary">Revenue vs Expenses</p>
+          </div>
+          {cashFlow.some((d) => d.inflow > 0 || d.outflow > 0) ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={cashFlow.slice(-14)}>
+                <defs>
+                  <linearGradient id="inGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#155E4B" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#155E4B" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="outGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#DC2626" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#DC2626" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(v) => new Date(v).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                  tick={{ fontSize: 10 }}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis tickFormatter={(v) => fmt(v)} tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+                <Tooltip formatter={(v: number) => [fmt(v), ""]} />
+                <Area type="monotone" dataKey="inflow" stroke="#155E4B" fill="url(#inGrad)" strokeWidth={2} name="Revenue" />
+                <Area type="monotone" dataKey="outflow" stroke="#DC2626" fill="url(#outGrad)" strokeWidth={1.5} strokeDasharray="4 3" name="Expenses" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[200px] text-text-secondary">
+              <TrendingUp size={32} className="mb-2 opacity-20" />
+              <p className="text-sm">No cash flow data yet</p>
+              <p className="text-xs opacity-60 mt-1">Record bills and expenses to see trends</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Transactions Table */}
+      {/* Recent Expenses */}
       <div className="ndl-card overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="ndl-section-title">Recent Transactions</h2>
-          <button className="ndl-btn-secondary text-xs px-3 py-1.5">View All</button>
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+          <h3 className="font-semibold text-text-primary text-sm">Recent Expenses</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-secondary">{expenseTotal} total</span>
+            <button className="ndl-btn-primary text-xs gap-1.5 px-3 py-1.5">
+              <Plus size={12} /> Add Expense
+            </button>
+          </div>
         </div>
-        <table className="ndl-table">
-          <thead><tr><th>Description</th><th>Category</th><th>Date</th><th>Type</th><th>Amount</th></tr></thead>
-          <tbody>
-            {transactions.map((t) => (
-              <tr key={t.id}>
-                <td>
-                  <p className="text-sm font-medium text-text-primary">{t.description}</p>
-                  <p className="text-xs text-text-secondary font-mono">{t.id}</p>
-                </td>
-                <td><span className="ndl-badge ndl-badge-secondary">{t.category}</span></td>
-                <td className="text-sm text-text-secondary">{t.date}</td>
-                <td>
-                  <span className={`ndl-badge text-xs ${t.type === "income" ? "ndl-badge-success" : "ndl-badge-danger"}`}>
-                    {t.type === "income" ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-                    {t.type === "income" ? "Income" : "Expense"}
-                  </span>
-                </td>
-                <td className={`text-sm font-bold ${t.type === "income" ? "text-success" : "text-danger"}`}>
-                  {t.type === "income" ? "+" : "-"}₹{t.amount.toLocaleString("en-IN")}
-                </td>
-              </tr>
+
+        {loading ? (
+          <div className="p-5 space-y-3 animate-pulse">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-12 bg-gray-50 rounded-lg" />
             ))}
-          </tbody>
-        </table>
+          </div>
+        ) : expenses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-text-secondary">
+            <DollarSign size={36} className="mb-2 opacity-20" />
+            <p className="text-sm font-medium">No expenses recorded yet</p>
+            <p className="text-xs mt-1 opacity-60">Add your first expense to track spending</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {expenses.map((exp) => (
+              <div key={exp.id} className="px-5 py-3 flex items-center gap-4 hover:bg-surface-hover transition-colors">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-text-primary truncate">{exp.description}</p>
+                  <p className="text-xs text-text-secondary">
+                    {exp.category?.name ?? "Uncategorised"} ·{" "}
+                    {new Date(exp.expense_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-danger">−{fmt(exp.total_amount)}</p>
+                  <p className="text-xs text-text-tertiary">{PM_LABELS[exp.payment_method ?? ""] ?? exp.payment_method ?? "—"}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {expenseTotal > 10 && (
+          <div className="px-5 py-3 border-t border-border text-center">
+            <button className="text-xs text-primary hover:underline">View all {expenseTotal} expenses →</button>
+          </div>
+        )}
       </div>
     </div>
   );
